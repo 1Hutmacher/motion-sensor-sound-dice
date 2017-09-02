@@ -181,8 +181,10 @@ void sdErrorCheck(void) {
 }
 
 /*
- * get the numbre of wav files in the card
+ * gets the file index. 
  * We only use the top level directory, other should work as well though
+ * This includes the randomize parameters
+ * return: the actual index of the file to be played, or -1 if no file should be playd
  */
 int get_file_index(FatReader &dir) {
   FatReader file;
