@@ -33,7 +33,15 @@ int randNumber;
 uint8_t dirLevel; // indent level for file/dir names    (for prettyprinting)
 dir_t dirBuf;     // buffer for directory reads
 
-
+// Config for track randomization
+// the percentage is used to add additional 
+int percentage = 30;
+// mandatory counter: If the numbre oftimes no track is played, a track will be forced
+int mandatory_counter = 3;
+// counter variable
+int global_counter = 0;
+// sleep variable; used after trigger event, but no sound effect; in ms
+int sleep_timer = 3000;
 
 
 // Function definitions (we define them here, but the code is below)
@@ -187,10 +195,32 @@ int get_file_index(FatReader &dir) {
     if (!file.open(vol, dirBuf)) {        // open the file in the directory
       error("file.open failed");          // something went wrong
     }
-    printEntryName(dirBuf);
+//    printEntryName(dirBuf);
     ++count;
   }
-  return random(0, count);
+
+  int index = random (0, int(count * (100 / percentage)));
+
+// we randomize over a multiple of the amount of files in there
+// if this number is higher or equal (start counting at zero), 
+// we return -1 and don't play any sounds but wait
+  if (index >= count) {
+    // if the global counter reaches mandatory_counter, we always play a sound!
+    if (global_counter == mandatory_counter) {
+      Serial.println("global_counter < mandatory_counter");
+      // reset global_counter
+      global_counter = 0;
+      return random(0,count);
+    }
+    ++global_counter;
+    Serial.println("ZZZZZ....");
+    delay(sleep_timer);
+    return -1;  
+  } else {
+    Serial.println("yay - valid index");
+    global_counter = 0;
+    return index;  
+  }
 }
 
 /*
@@ -198,6 +228,11 @@ int get_file_index(FatReader &dir) {
  */
 void play(FatReader &dir, int index) {
   FatReader file;
+  if (index < 0) {
+    Serial.println("-1");
+    // we don't do anything but wait for the next trigger
+    return;  
+  }
   int counter = 0;
   
   while (dir.readDir(dirBuf) > 0) {    // Read every file in the directory one at a time
