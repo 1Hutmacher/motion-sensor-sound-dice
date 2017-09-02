@@ -207,17 +207,14 @@ int get_file_index(FatReader &dir) {
   if (index >= count) {
     // if the global counter reaches mandatory_counter, we always play a sound!
     if (global_counter == mandatory_counter) {
-      Serial.println("global_counter < mandatory_counter");
       // reset global_counter
       global_counter = 0;
       return random(0,count);
     }
     ++global_counter;
-    Serial.println("ZZZZZ....");
     delay(sleep_timer);
     return -1;  
   } else {
-    Serial.println("yay - valid index");
     global_counter = 0;
     return index;  
   }
@@ -229,7 +226,6 @@ int get_file_index(FatReader &dir) {
 void play(FatReader &dir, int index) {
   FatReader file;
   if (index < 0) {
-    Serial.println("-1");
     // we don't do anything but wait for the next trigger
     return;  
   }
