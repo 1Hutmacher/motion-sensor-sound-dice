@@ -234,6 +234,8 @@ void play(FatReader &dir, int index) {
       printEntryName(dirBuf);              // print it out
       if (!wave.create(file)) {            // Figure out, is it a WAV proper?
         putstring(" Not a valid WAV");     // ok skip it
+        // TODO: this is a 'unwanted' feature
+        //  IF the file is not a valid wav file, the next valid file will be played
       } else {
         Serial.println();                  // Hooray it IS a WAV proper!
         wave.play();                       // make some noise!
