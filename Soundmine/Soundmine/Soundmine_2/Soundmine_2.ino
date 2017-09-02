@@ -37,7 +37,7 @@ dir_t dirBuf;     // buffer for directory reads
 
 
 // Function definitions (we define them here, but the code is below)
-void play(FatReader &dir);
+void play(FatReader &dir, int index);
 
 
 void setup() {
@@ -115,11 +115,16 @@ void loop() {
          Serial.print("motion detected at ");
          Serial.print(millis()/1000);
          Serial.println(" sec");
-         randNumber = random(1, 10);
-         Serial.print("Zufallszahl: ");
-         Serial.println(randNumber);
+         
          root.rewind();
-         play(root);
+         // get random file index
+         int index = get_file_index(root);
+         Serial.println("Index:");
+         Serial.println(index);
+         // reset directroy after checking files
+         root.rewind();
+
+         play(root, index);
          delay(50);
 
          } 
@@ -168,38 +173,71 @@ void sdErrorCheck(void) {
   Serial.println(card.errorData(), HEX);
   while(1);
 }
+
+/*
+ * get the numbre of wav files in the card
+ * We only use the top level directory, other should work as well though
+ */
+int get_file_index(FatReader &dir) {
+  FatReader file;
+  int count = 0;
+  while (dir.readDir(dirBuf) > 0) {    // Read every file in the directory one at a time
+    if (DIR_IS_SUBDIR(dirBuf)
+        && strncmp_P((char *)&dirBuf.name[8], PSTR("WAV"), 3)) {
+      continue;
+    }
+    if (!file.open(vol, dirBuf)) {        // open the file in the directory
+      error("file.open failed");          // something went wrong
+    }
+    Serial.println("Name:");
+    printEntryName(dirBuf);
+    ++count;
+  }
+  Serial.println("Number of files: ");
+  Serial.println(count);
+  return random(0, count);
+}
+
 /*
  * play recursively - possible stack overflow if subdirectories too nested
  */
-void play(FatReader &dir) {
+void play(FatReader &dir, int index) {
   FatReader file;
-  while (dir.readDir(dirBuf) > 0) {    // Read every file in the directory one at a time
+  int counter = 0;
   
-    // Skip it if not a subdirectory and not a .WAV file
-    if (!DIR_IS_SUBDIR(dirBuf)
+  while (dir.readDir(dirBuf) > 0) {    // Read every file in the directory one at a time
+    Serial.println("in play() --> while");
+    // Skip it if a subdirectory and not a .WAV file
+    // Files are named after 8.3 format
+    if (DIR_IS_SUBDIR(dirBuf)
          && strncmp_P((char *)&dirBuf.name[8], PSTR("WAV"), 3)) {
+      Serial.println("continue, subdir/ no wav");
       continue;
     }
 
-    Serial.println();            // clear out a new line
-    
-    for (uint8_t i = 0; i < dirLevel; i++) {
-       Serial.write(' ');       // this is for prettyprinting, put spaces in front
-    }
     if (!file.open(vol, dirBuf)) {        // open the file in the directory
       error("file.open failed");          // something went wrong
     }
     
     if (file.isDir()) {                   // check if we opened a new directory
+      // ignore subdirectories
+      Serial.println("is subdir");
+      continue;
       putstring("Subdir: ");
       printEntryName(dirBuf);
       Serial.println();
       dirLevel += 2;                      // add more spaces
       // play files in subdirectory
-      play(file);                         // recursive!
+      play(file, index);                         // recursive!
       dirLevel -= 2;    
     }
     else {
+      if (counter != index) {
+        Serial.println("incr counter");
+        Serial.println(counter, index);
+        ++counter;
+        continue;  
+      }
       // Aha! we found a file that isnt a directory
       putstring("Playing ");
       printEntryName(dirBuf);              // print it out
@@ -217,6 +255,7 @@ void play(FatReader &dir) {
         }       
         sdErrorCheck();                    // everything OK?
         // if (wave.errors)Serial.println(wave.errors);     // wave decoding errors
+        return;
       }
     }
   }
