@@ -119,8 +119,6 @@ void loop() {
          root.rewind();
          // get random file index
          int index = get_file_index(root);
-         Serial.println("Index:");
-         Serial.println(index);
          // reset directroy after checking files
          root.rewind();
 
@@ -189,12 +187,9 @@ int get_file_index(FatReader &dir) {
     if (!file.open(vol, dirBuf)) {        // open the file in the directory
       error("file.open failed");          // something went wrong
     }
-    Serial.println("Name:");
     printEntryName(dirBuf);
     ++count;
   }
-  Serial.println("Number of files: ");
-  Serial.println(count);
   return random(0, count);
 }
 
@@ -206,12 +201,10 @@ void play(FatReader &dir, int index) {
   int counter = 0;
   
   while (dir.readDir(dirBuf) > 0) {    // Read every file in the directory one at a time
-    Serial.println("in play() --> while");
     // Skip it if a subdirectory and not a .WAV file
     // Files are named after 8.3 format
     if (DIR_IS_SUBDIR(dirBuf)
          && strncmp_P((char *)&dirBuf.name[8], PSTR("WAV"), 3)) {
-      Serial.println("continue, subdir/ no wav");
       continue;
     }
 
@@ -221,7 +214,6 @@ void play(FatReader &dir, int index) {
     
     if (file.isDir()) {                   // check if we opened a new directory
       // ignore subdirectories
-      Serial.println("is subdir");
       continue;
       putstring("Subdir: ");
       printEntryName(dirBuf);
@@ -232,9 +224,8 @@ void play(FatReader &dir, int index) {
       dirLevel -= 2;    
     }
     else {
+      // check against counter; only plays the provided index
       if (counter != index) {
-        Serial.println("incr counter");
-        Serial.println(counter, index);
         ++counter;
         continue;  
       }
